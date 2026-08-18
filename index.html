@@ -1431,19 +1431,15 @@
             function matchAndDisplay(query) {
                 if (!query || query.trim() === '') { showToast('请输入查询内容', 'error'); return; }
                 const q = query.trim();
-                // 尝试精确匹配 barcode
                 let product = products.find(p => p.barcode && p.barcode === q);
                 if (!product) {
-                    // 尝试精确匹配 code
                     product = products.find(p => p.code && p.code === q);
                 }
                 if (!product) {
-                    // 尝试用 code 去掉 "SP" 前缀匹配数字部分
-                    const numericPart = q.replace(/^SP/i, ''); // 移除 SP 前缀（不区分大小写）
+                    const numericPart = q.replace(/^SP/i, '');
                     product = products.find(p => p.code && p.code.toUpperCase().replace(/^SP/, '') === numericPart);
                 }
                 if (!product) {
-                    // 尝试商品名称包含查询（不区分大小写）
                     const lowerQ = q.toLowerCase();
                     product = products.find(p => p.name.toLowerCase().includes(lowerQ));
                 }
@@ -1508,10 +1504,9 @@
                 }
             }
 
-            // ===== CSV 导出 =====
+            // ===== CSV 导出（纯文本） =====
             function exportCSV() {
                 if (products.length === 0) { showToast('无数据可导出', 'error'); return; }
-                // 标题行：名称,价格,条形码,二维码编码
                 const header = ['名称', '价格(元)', '条形码', '二维码编码'];
                 const rows = products.map(p => [
                     p.name,
@@ -1529,7 +1524,7 @@
                     }).join(','))
                     .join('\n');
 
-                // 加 BOM 支持中文
+                // 带 BOM 的 UTF-8
                 const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
@@ -1538,7 +1533,7 @@
                 showToast('✅ CSV导出成功', 'success');
             }
 
-            // ===== CSV 导入 =====
+            // ===== CSV 导入（修复解析，去重提示） =====
             function importCSV(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -1546,13 +1541,13 @@
                 reader.onload = function(e) {
                     try {
                         const text = e.target.result;
-                        // 去掉 BOM
+                        // 移除 BOM
                         const clean = text.replace(/^\uFEFF/, '');
                         const lines = clean.split(/\r?\n/).filter(line => line.trim() !== '');
-                        if (lines.length < 2) { showToast('CSV文件格式错误', 'error'); return; }
-                        // 解析CSV（简单实现，忽略引号内的逗号）
+                        if (lines.length < 2) { showToast('CSV文件格式错误（至少需要标题行+数据行）', 'error'); return; }
+
+                        // 解析CSV（支持引号）
                         const parseRow = (row) => {
-                            // 简单分割，不考虑引号嵌套，但可处理引号
                             const result = [];
                             let current = '';
                             let inQuotes = false;
@@ -1574,22 +1569,49 @@
                         };
 
                         const header = parseRow(lines[0]);
-                        // 期望标题：名称,价格,条形码,二维码编码 (顺序可调，但这里按顺序)
+                        // 期望：名称,价格,条形码,二维码编码 （顺序固定）
                         const dataRows = lines.slice(1).map(line => parseRow(line));
                         const imported = [];
+                        let skipCount = 0;
                         for (const row of dataRows) {
                             if (row.length < 4) continue;
                             const name = row[0] || '未命名';
                             const price = parseFloat(row[1]);
                             if (isNaN(price)) continue;
                             const barcode = row[2] || '';
-                            const code = row[3] || '';
-                            // 检查编码冲突
-                            if (code && products.some(p => p.code === code)) {
-                                // 自动追加后缀或跳过
-                                showToast(`编码 ${code} 已存在，跳过该行`, 'error');
-                                continue;
+                            let code = row[3] || '';
+
+                            // 如果编码为空，自动生成
+                            if (!code) {
+                                code = generateNextCode();
+                            } else {
+                                // 检查编码是否已存在（在现有products和本次导入列表中）
+                                const existInExisting = products.some(p => p.code === code);
+                                const existInImported = imported.some(p => p.code === code);
+                                if (existInExisting || existInImported) {
+                                    // 自动追加序号
+                                    let suffix = 1;
+                                    let newCode = code;
+                                    while (products.some(p => p.code === newCode) || imported.some(p => p.code ===
+                                            newCode)) {
+                                        newCode = code + String(suffix++);
+                                    }
+                                    code = newCode;
+                                    showToast(`编码 ${row[3]} 已存在，自动改为 ${code}`, 'warning');
+                                }
                             }
+
+                            // 条形码重复检查（同样处理）
+                            if (barcode) {
+                                const existBarcode = products.some(p => p.barcode === barcode) ||
+                                    imported.some(p => p.barcode === barcode);
+                                if (existBarcode) {
+                                    // 跳过此条
+                                    skipCount++;
+                                    continue;
+                                }
+                            }
+
                             imported.push({
                                 id: generateId(),
                                 name,
@@ -1601,8 +1623,16 @@
                                 createdAt: Date.now()
                             });
                         }
-                        if (imported.length === 0) { showToast('没有有效数据可导入', 'error'); return; }
-                        if (!confirm(`将导入 ${imported.length} 条数据，是否继续？`)) return;
+
+                        if (imported.length === 0) {
+                            showToast('没有有效数据可导入（可能有编码或条码冲突）', 'error');
+                            return;
+                        }
+                        let msg = `将导入 ${imported.length} 条数据`;
+                        if (skipCount > 0) msg += `，跳过 ${skipCount} 条（条形码冲突）`;
+                        if (!confirm(msg + '，是否继续？')) return;
+
+                        // 追加到现有数据（新数据在前）
                         products = [...imported, ...products];
                         saveProducts();
                         renderProductList();
