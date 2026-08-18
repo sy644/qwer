@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, shrink-to-fit=yes" />
     <title>商品扫码查询 · 老人友好版</title>
 
-    <!-- 扫码库 -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
     </script>
-    <!-- 生成二维码库 -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js">
     </script>
-    <!-- SheetJS Excel库 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
     </script>
 
@@ -187,13 +184,27 @@
         }
         .card-header-right {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
             flex-shrink: 0;
-            flex-wrap: nowrap;
         }
         .card-header-right .btn {
             flex-shrink: 0;
+            min-height: 30px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+        }
+        .card-header-right .btn-add {
+            width: 36px;
+            height: 36px;
+            font-size: 1.6rem;
+            padding: 0;
+            min-height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .product-list {
@@ -748,13 +759,14 @@
             }
             .card-header-right .btn-sm {
                 font-size: 0.7rem;
-                padding: 6px 10px;
-                min-height: 30px;
+                padding: 4px 8px;
+                min-height: 26px;
             }
-            .btn-add {
-                width: 36px;
-                height: 36px;
-                font-size: 1.4rem;
+            .card-header-right .btn-add {
+                width: 32px;
+                height: 32px;
+                font-size: 1.3rem;
+                min-height: 32px;
             }
             .btn-exit-scan {
                 width: 36px;
@@ -775,8 +787,14 @@
             }
             .card-header-right .btn-sm {
                 font-size: 0.65rem;
-                padding: 4px 6px;
-                min-height: 26px;
+                padding: 2px 6px;
+                min-height: 22px;
+            }
+            .card-header-right .btn-add {
+                width: 28px;
+                height: 28px;
+                font-size: 1.1rem;
+                min-height: 28px;
             }
         }
     </style>
@@ -839,8 +857,8 @@
                 <div class="card-header">
                     <span class="card-header-left">📦 商品列表</span>
                     <span class="card-header-right">
-                        <button class="btn btn-outline btn-sm" onclick="exportExcel()">📥 导出Excel</button>
-                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFileInput').click()">📤 导入Excel</button>
+                        <button class="btn btn-outline btn-sm" onclick="exportExcel()">导出</button>
+                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFileInput').click()">导入</button>
                         <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="importExcel(event)">
                         <button class="btn btn-add" onclick="openAddModal()" title="添加商品">➕</button>
                     </span>
@@ -1506,7 +1524,6 @@
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.json_to_sheet(data);
                 XLSX.utils.book_append_sheet(wb, ws, '商品');
-                // 生成并下载
                 const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
                 const blob = new Blob([wbout], { type: 'application/octet-stream' });
                 const link = document.createElement('a');
@@ -1532,7 +1549,6 @@
                             return;
                         }
 
-                        // 检查列名
                         const headers = Object.keys(jsonData[0]);
                         const expected = ['名称', '价格(元)', '条形码', '二维码编码'];
                         const missing = expected.filter(h => !headers.includes(h));
@@ -1552,11 +1568,9 @@
                             let barcode = String(row['条形码'] || '').trim();
                             let code = String(row['二维码编码'] || '').trim();
 
-                            // 处理编码
                             if (!code) {
                                 code = generateNextCode();
                             } else {
-                                // 检查冲突
                                 const exist = products.some(p => p.code === code) ||
                                     imported.some(p => p.code === code);
                                 if (exist) {
@@ -1571,7 +1585,6 @@
                                 }
                             }
 
-                            // 条形码冲突跳过
                             if (barcode) {
                                 const existBarcode = products.some(p => p.barcode === barcode) ||
                                     imported.some(p => p.barcode === barcode);
