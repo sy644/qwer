@@ -30,6 +30,7 @@
             --font-lg: 1.25rem;
             --font-md: 1.05rem;
             --font-sm: 0.95rem;
+            --nav-height: 72px;
         }
 
         * {
@@ -47,7 +48,7 @@
             font-size: 17px;
             line-height: 1.6;
             -webkit-tap-highlight-color: transparent;
-            padding-bottom: env(safe-area-inset-bottom, 20px);
+            padding-bottom: calc(var(--nav-height) + 20px);
         }
 
         .app-container {
@@ -85,22 +86,36 @@
             color: #9b8b7a;
         }
 
-        .nav-tabs {
+        /* ===== 底部导航 ===== */
+        .nav-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             display: flex;
-            gap: 10px;
-            margin: 18px 0 20px;
-            background: var(--card-bg);
-            border-radius: 30px;
-            padding: 6px;
-            box-shadow: var(--shadow);
-            position: sticky;
-            top: 10px;
-            z-index: 50;
+            gap: 8px;
+            padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+            height: var(--nav-height);
+            align-items: center;
+            justify-content: center;
+            max-width: 580px;
+            margin: 0 auto;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            border-radius: 20px 20px 0 0;
         }
-        .nav-tab {
+        .nav-bottom .nav-tab {
             flex: 1;
-            padding: 15px 12px;
-            border-radius: 26px;
+            max-width: 200px;
+            padding: 12px 10px;
+            border-radius: 30px;
             border: none;
             cursor: pointer;
             font-size: var(--font-lg);
@@ -113,15 +128,16 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            min-height: 54px;
+            min-height: 50px;
+            -webkit-tap-highlight-color: transparent;
         }
-        .nav-tab.active {
+        .nav-bottom .nav-tab.active {
             background: var(--primary);
             color: #fff;
             box-shadow: 0 4px 14px rgba(224, 123, 60, 0.35);
         }
-        .nav-tab:active {
-            transform: scale(0.96);
+        .nav-bottom .nav-tab:active {
+            transform: scale(0.94);
         }
 
         .view {
@@ -167,7 +183,7 @@
             gap: 10px;
         }
 
-        /* ===== 商品列表（卡片样式） ===== */
+        /* ===== 商品列表 ===== */
         .product-list {
             display: flex;
             flex-direction: column;
@@ -226,7 +242,6 @@
             margin-top: 2px;
         }
 
-        /* 操作按钮竖向排列 */
         .product-item-actions {
             display: flex;
             flex-direction: column;
@@ -249,7 +264,7 @@
             cursor: not-allowed;
         }
 
-        /* ===== 按钮通用 ===== */
+        /* ===== 按钮 ===== */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -321,7 +336,7 @@
             transform: scale(0.9);
         }
 
-        /* ===== 扫码区域 ===== */
+        /* ===== 扫码 ===== */
         #scan-reader {
             width: 100%;
             border-radius: var(--radius-sm);
@@ -352,7 +367,6 @@
             margin-bottom: 12px;
             opacity: 0.7;
         }
-        /* 动态扫描线 */
         .scan-line {
             position: absolute;
             left: 10%;
@@ -474,7 +488,58 @@
             justify-content: center;
         }
 
-        /* ===== 表单（模态框内） ===== */
+        /* ===== 模态框 ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            animation: fadeIn 0.25s;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        .modal-dialog {
+            background: #fff;
+            border-radius: var(--radius);
+            padding: 24px 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            max-width: 440px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-dialog h2 {
+            font-size: 1.6rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #4a3728;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .modal-actions .btn {
+            flex: 1;
+            min-width: 100px;
+        }
+
         .form-group {
             margin-bottom: 16px;
         }
@@ -542,62 +607,35 @@
             opacity: 0.6;
         }
 
-        /* ===== 模态框 ===== */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.55);
-            z-index: 200;
+        /* ===== 二维码弹窗 ===== */
+        #qrModal .modal-dialog {
+            text-align: center;
+            max-width: 400px;
+        }
+        #qrModal .qr-wrapper {
             display: flex;
-            align-items: center;
             justify-content: center;
-            padding: 20px;
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            animation: fadeIn 0.25s;
+            margin: 12px 0;
         }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        .modal-dialog {
-            background: #fff;
-            border-radius: var(--radius);
-            padding: 24px 20px;
-            text-align: left;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            max-width: 440px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .modal-dialog h2 {
-            font-size: 1.6rem;
-            margin-bottom: 16px;
+        #qrModal .qr-actions {
             display: flex;
-            align-items: center;
             gap: 10px;
-            color: #4a3728;
-        }
-        .modal-actions {
-            display: flex;
-            gap: 12px;
+            justify-content: center;
+            margin-top: 12px;
             flex-wrap: wrap;
-            margin-top: 8px;
         }
-        .modal-actions .btn {
-            flex: 1;
-            min-width: 100px;
+        #qrModal .btn-save-qr {
+            background: var(--success);
+            color: #fff;
+        }
+        #qrModal .btn-save-qr:hover {
+            background: #4a8a5e;
         }
 
         /* ===== Toast ===== */
         .toast {
             position: fixed;
-            bottom: 30px;
+            bottom: calc(var(--nav-height) + 20px);
             left: 50%;
             transform: translateX(-50%);
             background: #3d3d3d;
@@ -623,7 +661,6 @@
             background: var(--danger);
         }
 
-        /* ===== 响应式 ===== */
         @media (max-width: 480px) {
             .app-container {
                 padding: 8px 10px 16px;
@@ -658,6 +695,11 @@
             .modal-dialog {
                 padding: 18px 14px;
             }
+            .nav-bottom .nav-tab {
+                font-size: var(--font-md);
+                padding: 10px 6px;
+                min-height: 44px;
+            }
         }
         @media (max-width: 380px) {
             .product-item-actions {
@@ -668,28 +710,18 @@
                 padding: 2px 4px;
                 min-height: 24px;
             }
-            .nav-tab {
-                font-size: var(--font-sm);
-                padding: 12px 8px;
-                min-height: 44px;
-            }
         }
     </style>
 </head>
 <body>
     <div class="app-container">
+
         <!-- 顶部 -->
         <header class="app-header">
             <span class="icon-row">🛒</span>
             <h1>商品扫码查询</h1>
             <p class="subtitle">条形码 / 二维码 · 价格一目了然</p>
         </header>
-
-        <!-- 导航 -->
-        <nav class="nav-tabs" id="navTabs">
-            <button class="nav-tab active" data-view="scanView">📷 扫码查询</button>
-            <button class="nav-tab" data-view="manageView">📋 管理商品</button>
-        </nav>
 
         <!-- ===== 扫码视图 ===== -->
         <section class="view active" id="scanView">
@@ -737,10 +769,7 @@
         <section class="view" id="manageView">
             <div class="card">
                 <div class="card-header">
-                    <span class="card-header-left">
-                        📦 商品列表
-                        <span style="font-size:0.85rem;color:#a09486;font-weight:400;" id="productCount"></span>
-                    </span>
+                    <span class="card-header-left">📦 商品列表</span>
                     <span style="display:flex; gap:8px; align-items:center;">
                         <button class="btn btn-outline btn-sm" onclick="exportData()">📥 导出</button>
                         <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFileInput').click()">📤 导入</button>
@@ -751,6 +780,12 @@
                 <div class="product-list" id="productList"></div>
             </div>
         </section>
+
+        <!-- ===== 底部导航 ===== -->
+        <nav class="nav-bottom" id="navBottom">
+            <button class="nav-tab active" data-view="scanView">📷 扫码查询</button>
+            <button class="nav-tab" data-view="manageView">📋 管理商品</button>
+        </nav>
     </div>
 
     <!-- ===== 添加/编辑商品模态框 ===== -->
@@ -777,7 +812,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>📱 二维码编码 <span class="hint">(选填，用于生成专属二维码)</span></label>
+                    <label>📱 二维码编码 <span class="hint">(留空自动生成)</span></label>
                     <input type="text" class="form-input" id="modalCode" placeholder="SP001（可选）" autocomplete="off">
                 </div>
                 <div class="form-group">
@@ -800,13 +835,16 @@
         </div>
     </div>
 
-    <!-- ===== 二维码弹窗 ===== -->
+    <!-- ===== 二维码弹窗（含保存按钮） ===== -->
     <div class="modal-overlay" id="qrModal" style="display:none;" onclick="closeQrModal(event)">
         <div class="modal-dialog" onclick="event.stopPropagation()">
             <h3 style="text-align:center;">📱 商品二维码</h3>
             <p id="qrModalInfo" style="color:#6b6b6b;text-align:center;"></p>
-            <div class="qr-wrapper" id="qrContainer" style="display:flex;justify-content:center;"></div>
-            <button class="btn btn-primary btn-sm" style="margin-top:16px;width:100%;" onclick="closeQrModalDirect()">✕ 关闭</button>
+            <div class="qr-wrapper" id="qrContainer"></div>
+            <div class="qr-actions">
+                <button class="btn btn-save-qr btn-sm" onclick="saveQrImage()">💾 保存</button>
+                <button class="btn btn-outline btn-sm" onclick="closeQrModalDirect()">✕ 关闭</button>
+            </div>
         </div>
     </div>
 
@@ -871,7 +909,6 @@
 
             function saveProducts() {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-                updateCount();
             }
 
             function getSampleData() {
@@ -885,14 +922,27 @@
                 ];
             }
 
-            function updateCount() {
-                document.getElementById('productCount').textContent = '（共 ' + products.length + ' 件）';
+            // ===== 自动生成二维码编码 =====
+            function generateNextCode() {
+                // 提取所有以"SP"开头的编码，获取数字部分，取最大值+1
+                const codes = products
+                    .map(p => p.code)
+                    .filter(c => c && /^SP\d{3}$/.test(c))
+                    .map(c => parseInt(c.substring(2), 10))
+                    .filter(n => !isNaN(n));
+
+                let maxNum = 0;
+                if (codes.length > 0) {
+                    maxNum = Math.max(...codes);
+                }
+                const nextNum = maxNum + 1;
+                // 格式化为三位数字，如 SP001, SP012, SP123
+                return 'SP' + String(nextNum).padStart(3, '0');
             }
 
-            // ===== 渲染商品列表（卡片样式，操作按钮竖向） =====
+            // ===== 渲染商品列表 =====
             function renderProductList() {
                 const listEl = document.getElementById('productList');
-                updateCount();
                 if (products.length === 0) {
                     listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span><p>还没有添加商品</p></div>';
                     return;
@@ -937,7 +987,9 @@
                 document.getElementById('modalName').value = '';
                 document.getElementById('modalPrice').value = '';
                 document.getElementById('modalBarcode').value = '';
-                document.getElementById('modalCode').value = '';
+                // 自动生成编码
+                const nextCode = generateNextCode();
+                document.getElementById('modalCode').value = nextCode;
                 document.getElementById('modalImageUrl').value = '';
                 const preview = document.getElementById('modalImagePreview');
                 preview.src = '';
@@ -996,8 +1048,8 @@
                 event.preventDefault();
                 const name = document.getElementById('modalName').value.trim();
                 const price = parseFloat(document.getElementById('modalPrice').value);
-                const barcode = document.getElementById('modalBarcode').value.trim();
-                const code = document.getElementById('modalCode').value.trim();
+                let barcode = document.getElementById('modalBarcode').value.trim();
+                let code = document.getElementById('modalCode').value.trim();
                 const imageUrl = document.getElementById('modalImageUrl').value.trim();
                 const preview = document.getElementById('modalImagePreview');
                 const imageBase64 = preview.dataset.base64 || '';
@@ -1006,18 +1058,25 @@
                 if (isNaN(price) || price < 0) { showToast('请输入有效价格', 'error'); return; }
 
                 const editId = document.getElementById('modalEditId').value;
-                // 检查重复（排除自身）
+
+                // 如果编码为空，自动生成
+                if (!code) {
+                    code = generateNextCode();
+                } else {
+                    // 检查编码是否被占用（排除自身）
+                    if (products.some(p => p.code === code && p.id !== editId)) {
+                        showToast('二维码编码已被使用，请修改', 'error');
+                        return;
+                    }
+                }
+
+                // 条形码重复检查
                 if (barcode && products.some(p => p.barcode === barcode && p.id !== editId)) {
                     showToast('条形码已被使用', 'error');
                     return;
                 }
-                if (code && products.some(p => p.code === code && p.id !== editId)) {
-                    showToast('二维码编码已被使用', 'error');
-                    return;
-                }
 
                 if (editId) {
-                    // 编辑
                     const idx = products.findIndex(p => p.id === editId);
                     if (idx >= 0) {
                         products[idx].name = name;
@@ -1031,7 +1090,6 @@
                         showToast('✅ 商品已更新', 'success');
                     }
                 } else {
-                    // 添加
                     products.unshift({
                         id: generateId(),
                         name,
@@ -1095,14 +1153,18 @@
                 showToast('🗑️ 已删除', 'success');
             }
 
-            // ===== 二维码弹窗 =====
+            // ===== 二维码弹窗（含保存） =====
+            let currentQrCanvas = null;
+
             function showQrCode(id) {
                 const product = products.find(p => p.id === id);
                 if (!product || !product.code) return;
                 document.getElementById('qrModal').style.display = 'flex';
                 document.getElementById('qrModalInfo').textContent = product.name + ' | 编码：' + product.code;
-                document.getElementById('qrContainer').innerHTML = '';
-                new QRCode(document.getElementById('qrContainer'), {
+                const container = document.getElementById('qrContainer');
+                container.innerHTML = '';
+                // 生成二维码并保存canvas引用
+                const qr = new QRCode(container, {
                     text: product.code,
                     width: 200,
                     height: 200,
@@ -1110,6 +1172,11 @@
                     colorLight: '#ffffff',
                     correctLevel: QRCode.CorrectLevel.M,
                 });
+                // 获取canvas元素
+                setTimeout(() => {
+                    const canvas = container.querySelector('canvas');
+                    if (canvas) currentQrCanvas = canvas;
+                }, 100);
                 document.body.style.overflow = 'hidden';
             }
 
@@ -1121,10 +1188,38 @@
                 document.getElementById('qrModal').style.display = 'none';
                 document.getElementById('qrContainer').innerHTML = '';
                 document.body.style.overflow = '';
+                currentQrCanvas = null;
             }
-            document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeQrModalDirect();
+
+            // 保存二维码图片
+            function saveQrImage() {
+                if (!currentQrCanvas) {
+                    // 尝试重新获取
+                    const canvas = document.querySelector('#qrContainer canvas');
+                    if (canvas) currentQrCanvas = canvas;
+                }
+                if (!currentQrCanvas) {
+                    showToast('二维码尚未生成', 'error');
+                    return;
+                }
+                try {
+                    const link = document.createElement('a');
+                    link.download = 'qrcode.png';
+                    link.href = currentQrCanvas.toDataURL('image/png');
+                    link.click();
+                    showToast('✅ 二维码已保存', 'success');
+                } catch (e) {
+                    showToast('保存失败', 'error');
+                }
+            }
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    closeQrModalDirect();
                     closeModal();
-                    cancelBarcodeScan(); } });
+                    cancelBarcodeScan();
+                }
+            });
 
             // ===== 条形码扫码（模态框内） =====
             async function startBarcodeScanModal() {
@@ -1255,9 +1350,7 @@
                 lastScanTime = now;
                 if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                 matchAndDisplay(decodedText.trim());
-                // 自动停止扫码
                 stopScanner();
-                // 短暂禁用开始按钮
                 document.getElementById('btnStartScan').disabled = true;
                 setTimeout(() => {
                     document.getElementById('btnStartScan').disabled = false;
@@ -1360,7 +1453,7 @@
             }
 
             // ===== 导航切换 =====
-            document.getElementById('navTabs').addEventListener('click', function(e) {
+            document.getElementById('navBottom').addEventListener('click', function(e) {
                 const tab = e.target.closest('.nav-tab');
                 if (!tab) return;
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -1408,6 +1501,7 @@
             window.showQrCode = showQrCode;
             window.closeQrModal = closeQrModal;
             window.closeQrModalDirect = closeQrModalDirect;
+            window.saveQrImage = saveQrImage;
             window.exportData = exportData;
             window.importData = importData;
             window.deleteProduct = deleteProduct;
@@ -1429,7 +1523,6 @@
                 document.getElementById('scanView').classList.add('active');
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
                 document.querySelector('.nav-tab[data-view="scanView"]').classList.add('active');
-                // 清理扫描状态
                 document.getElementById('scan-reader').classList.remove('scanning');
                 document.getElementById('scanPlaceholder').style.display = '';
             }
