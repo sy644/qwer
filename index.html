@@ -478,7 +478,7 @@
         /* ===== 扫码结果多卡片 ===== */
         .scan-result-area {
             margin-top: 16px;
-            display: none; /* 默认隐藏，有记录时显示 */
+            display: none;
         }
         .scan-result-area.has-records {
             display: block;
@@ -562,6 +562,21 @@
         .scan-total .total-amount {
             font-size: 2rem;
             color: #d44;
+        }
+
+        .scan-auto-clear {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #fff8e0;
+            border-radius: var(--radius-sm);
+            border: 1px solid #f0d080;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #8a7a40;
+        }
+        .scan-auto-clear .countdown {
+            font-weight: 700;
+            color: var(--danger);
         }
 
         .modal-overlay {
@@ -830,7 +845,7 @@
 
         <!-- ===== 扫码视图 ===== -->
         <section class="view active" id="scanView">
-            <!-- 扫码区域卡片（无标题） -->
+            <!-- 扫码区域卡片 -->
             <div class="card">
                 <div id="scan-reader">
                     <div class="scan-placeholder" id="scanPlaceholder">
@@ -845,10 +860,9 @@
                         📷 开始扫码
                     </button>
                 </div>
-                <!-- 说明文字已去掉 -->
             </div>
 
-            <!-- 手动查询卡片（无标题） -->
+            <!-- 手动查询卡片 -->
             <div class="card">
                 <div style="display:flex; gap:10px;">
                     <input type="text" class="form-input" id="manualCodeInput" placeholder="商品名称或编码（如 001）" style="flex:1;">
@@ -856,17 +870,19 @@
                 </div>
             </div>
 
-            <!-- ===== 扫码结果多卡片区域（默认隐藏） ===== -->
+            <!-- ===== 扫码结果多卡片区域 ===== -->
             <div class="card scan-result-area" id="scanResultArea">
                 <div class="card-header" style="margin-bottom:8px;">
                     <span>📋 扫码记录</span>
                     <button class="btn btn-outline btn-sm" onclick="clearAllScanResults()">清空全部</button>
                 </div>
-                <div class="scan-result-list" id="scanResultList">
-                    <!-- 动态插入卡片 -->
-                </div>
+                <div class="scan-result-list" id="scanResultList"></div>
                 <div class="scan-total" id="scanTotal">
                     合计：<span class="total-amount" id="totalAmount">0.00</span> 元
+                </div>
+                <!-- 自动清空提示 -->
+                <div class="scan-auto-clear" id="autoClearTip">
+                    ⏱ 无操作 <span class="countdown" id="countdownDisplay">30</span> 秒后自动清空记录
                 </div>
             </div>
         </section>
@@ -982,6 +998,12 @@
             // ===== 扫码结果存储 =====
             let scanResults = [];
 
+            // ===== 自动清空相关 =====
+            const AUTO_CLEAR_DELAY = 30; // 30秒
+            let autoClearTimer = null;
+            let countdownInterval = null;
+            let remainingSeconds = AUTO_CLEAR_DELAY;
+
             // ===== 工具 =====
             function generateId() { return 'prod_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8); }
 
@@ -998,13 +1020,13 @@
                 toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
             }
 
-            // ===== 语音播报 =====
+            // ===== 语音播报（语速0.9） =====
             function speakText(text) {
                 if (!('speechSynthesis' in window)) return;
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-CN';
-                utterance.rate = 0.75;
+                utterance.rate = 0.9; // 调整语速为0.9
                 setTimeout(() => window.speechSynthesis.speak(utterance), 200);
             }
 
@@ -1088,15 +1110,74 @@
                 listEl.innerHTML = html;
             }
 
+            // ===== 自动清空控制 =====
+            function resetAutoClearTimer() {
+                // 清除旧定时器
+                if (autoClearTimer) {
+                    clearTimeout(autoClearTimer);
+                    autoClearTimer = null;
+                }
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                // 如果无记录，隐藏倒计时
+                if (scanResults.length === 0) {
+                    document.getElementById('autoClearTip').style.display = 'none';
+                    return;
+                }
+                // 显示倒计时
+                document.getElementById('autoClearTip').style.display = 'block';
+                remainingSeconds = AUTO_CLEAR_DELAY;
+                document.getElementById('countdownDisplay').textContent = remainingSeconds;
+
+                // 启动倒计时更新
+                countdownInterval = setInterval(() => {
+                    remainingSeconds--;
+                    document.getElementById('countdownDisplay').textContent = remainingSeconds;
+                    if (remainingSeconds <= 0) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
+                }, 1000);
+
+                // 启动自动清空定时器
+                autoClearTimer = setTimeout(() => {
+                    if (scanResults.length > 0) {
+                        scanResults = [];
+                        renderScanResults();
+                        showToast('⏱ 长时间无操作，已自动清空记录', 'success');
+                    }
+                    // 清空后隐藏倒计时
+                    document.getElementById('autoClearTip').style.display = 'none';
+                    if (countdownInterval) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
+                }, AUTO_CLEAR_DELAY * 1000);
+            }
+
             // ===== 扫码结果多卡片渲染 =====
             function renderScanResults() {
                 const listEl = document.getElementById('scanResultList');
                 const totalEl = document.getElementById('totalAmount');
                 const area = document.getElementById('scanResultArea');
+                const tip = document.getElementById('autoClearTip');
+
                 if (scanResults.length === 0) {
                     listEl.innerHTML = '';
                     totalEl.textContent = '0.00';
                     area.classList.remove('has-records');
+                    tip.style.display = 'none';
+                    // 清除定时器
+                    if (autoClearTimer) {
+                        clearTimeout(autoClearTimer);
+                        autoClearTimer = null;
+                    }
+                    if (countdownInterval) {
+                        clearInterval(countdownInterval);
+                        countdownInterval = null;
+                    }
                     return;
                 }
                 area.classList.add('has-records');
@@ -1122,6 +1203,9 @@
                 });
                 listEl.innerHTML = html;
                 totalEl.textContent = total.toFixed(2);
+
+                // 重置自动清空定时器（每次有记录变化时重置）
+                resetAutoClearTimer();
             }
 
             function addScanResult(product) {
@@ -1751,6 +1835,8 @@
                 document.querySelector('.nav-tab[data-view="scanView"]').classList.add('active');
                 document.getElementById('scan-reader').classList.remove('scanning');
                 document.getElementById('scanPlaceholder').style.display = '';
+                // 初始化倒计时隐藏
+                document.getElementById('autoClearTip').style.display = 'none';
             }
 
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
