@@ -478,6 +478,10 @@
         /* ===== 扫码结果多卡片 ===== */
         .scan-result-area {
             margin-top: 16px;
+            display: none; /* 默认隐藏，有记录时显示 */
+        }
+        .scan-result-area.has-records {
+            display: block;
         }
         .scan-result-list {
             display: flex;
@@ -826,8 +830,8 @@
 
         <!-- ===== 扫码视图 ===== -->
         <section class="view active" id="scanView">
+            <!-- 扫码区域卡片（无标题） -->
             <div class="card">
-                <div class="card-header">📷 扫描商品码</div>
                 <div id="scan-reader">
                     <div class="scan-placeholder" id="scanPlaceholder">
                         <span class="scan-icon">📱</span>
@@ -841,21 +845,18 @@
                         📷 开始扫码
                     </button>
                 </div>
-                <p style="font-size:0.85rem;color:#a09486;margin-top:12px;text-align:center;">
-                    💡 支持商品条形码、二维码，将码对准画面即可<br>
-                    <span style="font-size:0.75rem;">扫描成功后自动停止 · 10秒无操作自动退出</span>
-                </p>
+                <!-- 说明文字已去掉 -->
             </div>
 
+            <!-- 手动查询卡片（无标题） -->
             <div class="card">
-                <div class="card-header">⌨️ 手动查询</div>
                 <div style="display:flex; gap:10px;">
                     <input type="text" class="form-input" id="manualCodeInput" placeholder="商品名称或编码（如 001）" style="flex:1;">
                     <button class="btn btn-success" onclick="manualQuery()">🔎 查询</button>
                 </div>
             </div>
 
-            <!-- ===== 扫码结果多卡片区域 ===== -->
+            <!-- ===== 扫码结果多卡片区域（默认隐藏） ===== -->
             <div class="card scan-result-area" id="scanResultArea">
                 <div class="card-header" style="margin-bottom:8px;">
                     <span>📋 扫码记录</span>
@@ -997,6 +998,16 @@
                 toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
             }
 
+            // ===== 语音播报 =====
+            function speakText(text) {
+                if (!('speechSynthesis' in window)) return;
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.75;
+                setTimeout(() => window.speechSynthesis.speak(utterance), 200);
+            }
+
             // ===== 数据 =====
             function loadProducts() {
                 try {
@@ -1081,11 +1092,14 @@
             function renderScanResults() {
                 const listEl = document.getElementById('scanResultList');
                 const totalEl = document.getElementById('totalAmount');
+                const area = document.getElementById('scanResultArea');
                 if (scanResults.length === 0) {
-                    listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span><p>暂无扫码记录</p></div>';
+                    listEl.innerHTML = '';
                     totalEl.textContent = '0.00';
+                    area.classList.remove('has-records');
                     return;
                 }
+                area.classList.add('has-records');
                 let html = '';
                 let total = 0;
                 scanResults.forEach((item, index) => {
@@ -1121,9 +1135,11 @@
                     imageBase64: product.imageBase64 || ''
                 });
                 renderScanResults();
+                // 语音播报
+                speakText(product.name + '，价格' + product.price + '元');
                 // 滚动到最新
                 const list = document.getElementById('scanResultList');
-                list.scrollTop = list.scrollHeight;
+                if (list) list.scrollTop = list.scrollHeight;
             }
 
             function removeScanResult(index) {
@@ -1508,7 +1524,7 @@
 
             function onScanSuccess(decodedText) {
                 const now = Date.now();
-                if (now - lastScanTime < 1500) return; // 防连扫
+                if (now - lastScanTime < 1500) return;
                 lastScanTime = now;
                 if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
 
@@ -1520,9 +1536,7 @@
                     showToast('⚠️ 未找到匹配商品', 'error');
                 }
 
-                // 自动停止扫码，方便再次扫码
                 stopScanner();
-                // 短暂禁用开始按钮
                 document.getElementById('btnStartScan').disabled = true;
                 setTimeout(() => {
                     document.getElementById('btnStartScan').disabled = false;
@@ -1553,7 +1567,7 @@
                     addScanResult(product);
                     showToast(`✅ 已添加：${product.name}`, 'success');
                 } else {
-                    // 尝试按名称模糊匹配
+                    // 按名称模糊匹配
                     const lowerQ = q.toLowerCase();
                     const found = products.find(p => p.name.toLowerCase().includes(lowerQ));
                     if (found) {
