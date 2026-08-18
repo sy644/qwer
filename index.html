@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, shrink-to-fit=yes" />
     <title>商品扫码查询 · 老人友好版</title>
 
+    <!-- 扫码库 -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
     </script>
+    <!-- 生成二维码库 -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js">
     </script>
-    <!-- 新增 SheetJS Excel库 -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- SheetJS Excel库 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+    </script>
 
     <style>
         :root {
@@ -1137,4 +1140,541 @@
                         saveProducts();
                         showToast('✅ 商品已更新', 'success');
                     }
-                } e...
+                } else {
+                    products.unshift({
+                        id: generateId(),
+                        name,
+                        price,
+                        barcode,
+                        code,
+                        imageUrl: '',
+                        imageBase64,
+                        createdAt: Date.now(),
+                    });
+                    saveProducts();
+                    showToast('✅ 商品已添加', 'success');
+                }
+                closeModal();
+                renderProductList();
+            }
+
+            // ===== 图片上传 =====
+            function handleModalImageUpload(event) {
+                const file = event.target.files[0];
+                if (!file || !file.type.startsWith('image/')) return;
+                compressImage(file, 200, 200, 0.7, function(base64) {
+                    const preview = document.getElementById('modalImagePreview');
+                    preview.src = base64;
+                    preview.classList.remove('no-image');
+                    preview.style.display = 'block';
+                    preview.dataset.base64 = base64;
+                });
+            }
+
+            function compressImage(file, maxWidth, maxHeight, quality, callback) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        let w = img.width,
+                            h = img.height;
+                        if (w > maxWidth || h > maxHeight) {
+                            const ratio = Math.min(maxWidth / w, maxHeight / h);
+                            w = Math.round(w * ratio);
+                            h = Math.round(h * ratio);
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        callback(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // ===== 删除商品 =====
+            function deleteProduct(id) {
+                if (!confirm('确定删除该商品吗？')) return;
+                products = products.filter(p => p.id !== id);
+                saveProducts();
+                renderProductList();
+                showToast('🗑️ 已删除', 'success');
+            }
+
+            // ===== 二维码 =====
+            let currentQrCanvas = null;
+
+            function showQrCode(id) {
+                const product = products.find(p => p.id === id);
+                if (!product || !product.code) return;
+                document.getElementById('qrModal').style.display = 'flex';
+                document.getElementById('qrModalInfo').textContent = product.name + ' | 编码：' + product.code;
+                const container = document.getElementById('qrContainer');
+                container.innerHTML = '';
+                const qr = new QRCode(container, {
+                    text: product.code,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#3d3d3d',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M,
+                });
+                setTimeout(() => {
+                    const canvas = container.querySelector('canvas');
+                    if (canvas) currentQrCanvas = canvas;
+                }, 100);
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeQrModal(e) {
+                if (e.target === document.getElementById('qrModal')) closeQrModalDirect();
+            }
+
+            function closeQrModalDirect() {
+                document.getElementById('qrModal').style.display = 'none';
+                document.getElementById('qrContainer').innerHTML = '';
+                document.body.style.overflow = '';
+                currentQrCanvas = null;
+            }
+
+            function saveQrImage() {
+                if (!currentQrCanvas) {
+                    const canvas = document.querySelector('#qrContainer canvas');
+                    if (canvas) currentQrCanvas = canvas;
+                }
+                if (!currentQrCanvas) {
+                    showToast('二维码尚未生成', 'error');
+                    return;
+                }
+                try {
+                    const link = document.createElement('a');
+                    link.download = 'qrcode.png';
+                    link.href = currentQrCanvas.toDataURL('image/png');
+                    link.click();
+                    showToast('✅ 二维码已保存', 'success');
+                } catch (e) {
+                    showToast('保存失败', 'error');
+                }
+            }
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    closeQrModalDirect();
+                    closeModal();
+                    cancelBarcodeScan();
+                }
+            });
+
+            // ===== 条形码扫码 =====
+            async function startBarcodeScanModal() {
+                if (isScanning) stopScanner();
+                if (isBarcodeScanning) return;
+                const modal = document.getElementById('barcodeScanModal');
+                const readerDiv = document.getElementById('barcodeScanReader');
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+
+                try {
+                    if (barcodeScanner) {
+                        await barcodeScanner.stop().catch(() => {});
+                        barcodeScanner = null;
+                    }
+                    barcodeScanner = new Html5Qrcode('barcodeScanReader');
+                    isBarcodeScanning = true;
+                    const config = {
+                        fps: 10,
+                        qrbox: { width: 250, height: 150 },
+                        aspectRatio: 1.5,
+                        formatsToSupport: [
+                            Html5QrcodeSupportedFormats.EAN_13,
+                            Html5QrcodeSupportedFormats.EAN_8,
+                            Html5QrcodeSupportedFormats.UPC_A,
+                            Html5QrcodeSupportedFormats.UPC_E,
+                            Html5QrcodeSupportedFormats.CODE_128,
+                        ],
+                    };
+                    await barcodeScanner.start({ facingMode: 'environment' }, config,
+                        (decodedText) => {
+                            document.getElementById('modalBarcode').value = decodedText;
+                            showToast('✅ 条形码已填入', 'success');
+                            cancelBarcodeScan();
+                        },
+                        () => {}
+                    );
+                } catch (err) {
+                    showToast('⚠️ 无法启动摄像头', 'error');
+                    cancelBarcodeScan();
+                }
+            }
+
+            async function cancelBarcodeScan() {
+                if (barcodeScanner && isBarcodeScanning) {
+                    try { await barcodeScanner.stop(); } catch (e) {}
+                }
+                barcodeScanner = null;
+                isBarcodeScanning = false;
+                document.getElementById('barcodeScanModal').style.display = 'none';
+                document.body.style.overflow = '';
+                document.getElementById('barcodeScanReader').innerHTML = '';
+            }
+
+            // ===== 扫码 =====
+            function startScanner() {
+                const readerEl = document.getElementById('scan-reader');
+                const placeholder = document.getElementById('scanPlaceholder');
+                const btnStart = document.getElementById('btnStartScan');
+                if (isScanning) return;
+                if (!window.Html5Qrcode) { showToast('扫码库加载失败', 'error'); return; }
+                if (!html5QrCode) html5QrCode = new Html5Qrcode('scan-reader');
+                clearResult();
+
+                if (scanTimer) { clearTimeout(scanTimer);
+                    scanTimer = null; }
+
+                const config = {
+                    fps: 10,
+                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                        const boxSize = Math.max(180, Math.floor(minEdge * 0.65));
+                        return { width: boxSize, height: boxSize };
+                    },
+                    aspectRatio: 1.0,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.UPC_A,
+                        Html5QrcodeSupportedFormats.UPC_E,
+                    ],
+                };
+
+                html5QrCode.start({ facingMode: 'environment' }, config, onScanSuccess, onScanFailure)
+                    .then(() => {
+                        isScanning = true;
+                        readerEl.classList.add('scanning');
+                        if (placeholder) placeholder.style.display = 'none';
+                        btnStart.disabled = true;
+                        btnStart.textContent = '⏳ 扫码中...';
+                        showToast('✅ 摄像头已开启，10秒无操作自动退出', 'success');
+
+                        scanTimer = setTimeout(() => {
+                            stopScanner();
+                            showToast('⏱️ 扫码超时已自动退出', 'error');
+                        }, 10000);
+                    })
+                    .catch(err => {
+                        isScanning = false;
+                        btnStart.disabled = false;
+                        btnStart.textContent = '📷 开始扫码';
+                        readerEl.classList.remove('scanning');
+                        if (placeholder) placeholder.style.display = '';
+                        showToast('⚠️ 无法访问摄像头', 'error');
+                    });
+            }
+
+            function stopScanner() {
+                const readerEl = document.getElementById('scan-reader');
+                const placeholder = document.getElementById('scanPlaceholder');
+                const btnStart = document.getElementById('btnStartScan');
+                if (scanTimer) {
+                    clearTimeout(scanTimer);
+                    scanTimer = null;
+                }
+                if (html5QrCode && isScanning) {
+                    html5QrCode.stop().then(() => {
+                        resetUI();
+                    }).catch(() => resetUI());
+                } else {
+                    resetUI();
+                }
+
+                function resetUI() {
+                    isScanning = false;
+                    readerEl.classList.remove('scanning');
+                    if (placeholder) placeholder.style.display = '';
+                    btnStart.disabled = false;
+                    btnStart.textContent = '📷 开始扫码';
+                }
+            }
+
+            let lastScanTime = 0;
+
+            function onScanSuccess(decodedText) {
+                const now = Date.now();
+                if (now - lastScanTime < 2500) return;
+                lastScanTime = now;
+                if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                matchAndDisplay(decodedText.trim());
+                stopScanner();
+                document.getElementById('btnStartScan').disabled = true;
+                setTimeout(() => {
+                    document.getElementById('btnStartScan').disabled = false;
+                }, 2000);
+            }
+
+            function onScanFailure() {}
+
+            // ===== 查询 =====
+            function matchAndDisplay(query) {
+                if (!query || query.trim() === '') { showToast('请输入查询内容', 'error'); return; }
+                const q = query.trim();
+                let product = products.find(p => p.barcode && p.barcode === q);
+                if (!product) {
+                    product = products.find(p => p.code && p.code === q);
+                }
+                if (!product) {
+                    const numericPart = q.replace(/^SP/i, '');
+                    product = products.find(p => p.code && p.code.toUpperCase().replace(/^SP/, '') === numericPart);
+                }
+                if (!product) {
+                    const lowerQ = q.toLowerCase();
+                    product = products.find(p => p.name.toLowerCase().includes(lowerQ));
+                }
+
+                const resultDiv = document.getElementById('scanResult');
+                const resultImage = document.getElementById('resultImage');
+                const resultName = document.getElementById('resultName');
+                const resultPrice = document.getElementById('resultPrice');
+                const resultCode = document.getElementById('resultCode');
+
+                if (product) {
+                    resultDiv.className = 'scan-result show';
+                    resultName.textContent = product.name;
+                    resultPrice.innerHTML = '¥' + product.price.toFixed(2);
+                    resultCode.textContent = '编码：' + (product.code || product.barcode || '');
+                    const imgSrc = product.imageBase64 || product.imageUrl || '';
+                    if (imgSrc) { resultImage.src = imgSrc;
+                        resultImage.style.display = 'block'; } else { resultImage.style.display = 'none'; }
+                    setTimeout(() => autoSpeak(product), 400);
+                } else {
+                    resultDiv.className = 'scan-result show not-found';
+                    resultName.textContent = '未找到匹配商品';
+                    resultPrice.innerHTML = '<span style="font-size:1.2rem;">无结果</span>';
+                    resultCode.textContent = '查询内容：' + q;
+                    resultImage.style.display = 'none';
+                }
+                resultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            function manualQuery() {
+                const q = document.getElementById('manualCodeInput').value.trim();
+                if (!q) { showToast('请输入商品名称或编码', 'error'); return; }
+                matchAndDisplay(q);
+            }
+
+            function clearResult() {
+                document.getElementById('scanResult').className = 'scan-result';
+                document.getElementById('manualCodeInput').value = '';
+            }
+
+            function autoSpeak(product) {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(product.name + '，价格' + product.price + '元');
+                    utterance.lang = 'zh-CN';
+                    utterance.rate = 0.75;
+                    setTimeout(() => window.speechSynthesis.speak(utterance), 300);
+                }
+            }
+
+            function speakResult() {
+                const name = document.getElementById('resultName').textContent;
+                const price = document.getElementById('resultPrice').textContent.replace('¥', '');
+                if (!name || name.includes('未找到')) { showToast('无内容可播报', 'error'); return; }
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(name + '，价格' + price + '元');
+                    utterance.lang = 'zh-CN';
+                    utterance.rate = 0.7;
+                    window.speechSynthesis.speak(utterance);
+                    showToast('🔊 正在播报', 'success');
+                }
+            }
+
+            // ===== Excel 导出 =====
+            function exportExcel() {
+                if (products.length === 0) { showToast('无数据可导出', 'error'); return; }
+                const data = products.map(p => ({
+                    '名称': p.name,
+                    '价格(元)': p.price,
+                    '条形码': p.barcode || '',
+                    '二维码编码': p.code || ''
+                }));
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(data);
+                XLSX.utils.book_append_sheet(wb, ws, '商品');
+                // 生成并下载
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([wbout], { type: 'application/octet-stream' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = '商品数据_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+                link.click();
+                showToast('✅ Excel导出成功', 'success');
+            }
+
+            // ===== Excel 导入 =====
+            function importExcel(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        if (jsonData.length === 0) {
+                            showToast('Excel文件为空或格式不正确', 'error');
+                            return;
+                        }
+
+                        // 检查列名
+                        const headers = Object.keys(jsonData[0]);
+                        const expected = ['名称', '价格(元)', '条形码', '二维码编码'];
+                        const missing = expected.filter(h => !headers.includes(h));
+                        if (missing.length > 0) {
+                            showToast('缺少列：' + missing.join('、') + '，请使用导出的模板格式', 'error');
+                            return;
+                        }
+
+                        const imported = [];
+                        let skipCount = 0;
+                        let conflictMsg = [];
+
+                        for (const row of jsonData) {
+                            const name = String(row['名称'] || '').trim() || '未命名';
+                            const price = parseFloat(row['价格(元)']);
+                            if (isNaN(price) || price < 0) { continue; }
+                            let barcode = String(row['条形码'] || '').trim();
+                            let code = String(row['二维码编码'] || '').trim();
+
+                            // 处理编码
+                            if (!code) {
+                                code = generateNextCode();
+                            } else {
+                                // 检查冲突
+                                const exist = products.some(p => p.code === code) ||
+                                    imported.some(p => p.code === code);
+                                if (exist) {
+                                    let suffix = 1;
+                                    let newCode = code;
+                                    while (products.some(p => p.code === newCode) || imported.some(p => p.code ===
+                                            newCode)) {
+                                        newCode = code + String(suffix++);
+                                    }
+                                    conflictMsg.push(`${code} → ${newCode}`);
+                                    code = newCode;
+                                }
+                            }
+
+                            // 条形码冲突跳过
+                            if (barcode) {
+                                const existBarcode = products.some(p => p.barcode === barcode) ||
+                                    imported.some(p => p.barcode === barcode);
+                                if (existBarcode) {
+                                    skipCount++;
+                                    continue;
+                                }
+                            }
+
+                            imported.push({
+                                id: generateId(),
+                                name,
+                                price,
+                                barcode,
+                                code,
+                                imageUrl: '',
+                                imageBase64: '',
+                                createdAt: Date.now()
+                            });
+                        }
+
+                        if (imported.length === 0) {
+                            let msg = '没有有效数据可导入';
+                            if (skipCount > 0) msg += `（${skipCount} 条因条形码冲突被跳过）`;
+                            showToast(msg, 'error');
+                            return;
+                        }
+
+                        let msg = `将导入 ${imported.length} 条数据`;
+                        if (skipCount > 0) msg += `，跳过 ${skipCount} 条（条形码冲突）`;
+                        if (conflictMsg.length > 0) msg += `\n编码调整：${conflictMsg.join('; ')}`;
+                        if (!confirm(msg + '，是否继续？')) return;
+
+                        products = [...imported, ...products];
+                        saveProducts();
+                        renderProductList();
+                        showToast(`✅ 成功导入 ${imported.length} 条数据`, 'success');
+                    } catch (err) {
+                        showToast('⚠️ Excel解析失败：' + err.message, 'error');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+                event.target.value = '';
+            }
+
+            // ===== 导航切换 =====
+            document.getElementById('navBottom').addEventListener('click', function(e) {
+                const tab = e.target.closest('.nav-tab');
+                if (!tab) return;
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById(tab.dataset.view).classList.add('active');
+                if (tab.dataset.view === 'manageView') {
+                    stopScanner();
+                    renderProductList();
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            document.getElementById('manualCodeInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault();
+                    manualQuery(); }
+            });
+
+            // ===== 暴露全局 =====
+            window.startScanner = startScanner;
+            window.stopScanner = stopScanner;
+            window.manualQuery = manualQuery;
+            window.clearResult = clearResult;
+            window.speakResult = speakResult;
+            window.showQrCode = showQrCode;
+            window.closeQrModal = closeQrModal;
+            window.closeQrModalDirect = closeQrModalDirect;
+            window.saveQrImage = saveQrImage;
+            window.exportExcel = exportExcel;
+            window.importExcel = importExcel;
+            window.deleteProduct = deleteProduct;
+            window.openAddModal = openAddModal;
+            window.openEditModal = openEditModal;
+            window.closeModal = closeModal;
+            window.closeModalOutside = closeModalOutside;
+            window.handleModalSubmit = handleModalSubmit;
+            window.handleModalImageUpload = handleModalImageUpload;
+            window.startBarcodeScanModal = startBarcodeScanModal;
+            window.cancelBarcodeScan = cancelBarcodeScan;
+
+            // ===== 初始化 =====
+            function init() {
+                loadProducts();
+                renderProductList();
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('scanView').classList.add('active');
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelector('.nav-tab[data-view="scanView"]').classList.add('active');
+                document.getElementById('scan-reader').classList.remove('scanning');
+                document.getElementById('scanPlaceholder').style.display = '';
+            }
+
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+            else init();
+
+        })();
+    </script>
+</body>
+</html>
