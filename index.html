@@ -408,7 +408,6 @@
             }
         }
 
-        /* 退出扫码按钮 */
         .btn-exit-scan {
             position: absolute;
             top: 12px;
@@ -806,7 +805,6 @@
                         <span>点击下方醒目按钮<br>开启摄像头扫码</span>
                     </div>
                     <div class="scan-line"></div>
-                    <!-- 退出按钮 -->
                     <button class="btn-exit-scan" id="btnExitScan" onclick="stopScanner()">✕</button>
                 </div>
                 <div class="scan-controls" style="display:flex; gap:12px; margin-top:14px; flex-wrap:wrap; justify-content:center;">
@@ -821,9 +819,9 @@
             </div>
 
             <div class="card">
-                <div class="card-header">⌨️ 手动输入编码查询</div>
+                <div class="card-header">⌨️ 手动查询</div>
                 <div style="display:flex; gap:10px;">
-                    <input type="text" class="form-input" id="manualCodeInput" placeholder="条形码或二维码编码" style="flex:1;">
+                    <input type="text" class="form-input" id="manualCodeInput" placeholder="商品名称或编码（如 001）" style="flex:1;">
                     <button class="btn btn-success" onclick="manualQuery()">🔎 查询</button>
                 </div>
             </div>
@@ -846,9 +844,9 @@
                 <div class="card-header">
                     <span class="card-header-left">📦 商品列表</span>
                     <span class="card-header-right">
-                        <button class="btn btn-outline btn-sm" onclick="exportData()">📥 导出</button>
-                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFileInput').click()">📤 导入</button>
-                        <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importData(event)">
+                        <button class="btn btn-outline btn-sm" onclick="exportCSV()">📥 导出CSV</button>
+                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFileInput').click()">📤 导入CSV</button>
+                        <input type="file" id="importFileInput" accept=".csv" style="display:none;" onchange="importCSV(event)">
                         <button class="btn btn-add" onclick="openAddModal()" title="添加商品">➕</button>
                     </span>
                 </div>
@@ -943,7 +941,7 @@
             let products = [];
             let html5QrCode = null;
             let isScanning = false;
-            let scanTimer = null; // 超时定时器
+            let scanTimer = null;
             let barcodeScanner = null;
             let isBarcodeScanning = false;
 
@@ -1342,7 +1340,6 @@
                 if (!html5QrCode) html5QrCode = new Html5Qrcode('scan-reader');
                 clearResult();
 
-                // 清除旧的定时器
                 if (scanTimer) { clearTimeout(scanTimer);
                     scanTimer = null; }
 
@@ -1373,7 +1370,6 @@
                         btnStart.textContent = '⏳ 扫码中...';
                         showToast('✅ 摄像头已开启，10秒无操作自动退出', 'success');
 
-                        // 设置10秒超时
                         scanTimer = setTimeout(() => {
                             stopScanner();
                             showToast('⏱️ 扫码超时已自动退出', 'error');
@@ -1389,12 +1385,10 @@
                     });
             }
 
-            // ===== 停止扫码（含清除定时器和隐藏退出按钮） =====
             function stopScanner() {
                 const readerEl = document.getElementById('scan-reader');
                 const placeholder = document.getElementById('scanPlaceholder');
                 const btnStart = document.getElementById('btnStartScan');
-                // 清除超时定时器
                 if (scanTimer) {
                     clearTimeout(scanTimer);
                     scanTimer = null;
@@ -1413,7 +1407,6 @@
                     if (placeholder) placeholder.style.display = '';
                     btnStart.disabled = false;
                     btnStart.textContent = '📷 开始扫码';
-                    // 退出按钮会自动隐藏，因为 .scanning 类被移除
                 }
             }
 
@@ -1425,9 +1418,7 @@
                 lastScanTime = now;
                 if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                 matchAndDisplay(decodedText.trim());
-                // 扫码成功后自动停止（会清除定时器）
                 stopScanner();
-                // 短暂禁用开始按钮
                 document.getElementById('btnStartScan').disabled = true;
                 setTimeout(() => {
                     document.getElementById('btnStartScan').disabled = false;
@@ -1436,9 +1427,27 @@
 
             function onScanFailure() {}
 
-            function matchAndDisplay(code) {
-                let product = products.find(p => p.barcode && p.barcode.trim() === code) ||
-                    products.find(p => p.code && p.code.trim() === code);
+            // ===== 核心查询：支持名称、编码（含数字部分） =====
+            function matchAndDisplay(query) {
+                if (!query || query.trim() === '') { showToast('请输入查询内容', 'error'); return; }
+                const q = query.trim();
+                // 尝试精确匹配 barcode
+                let product = products.find(p => p.barcode && p.barcode === q);
+                if (!product) {
+                    // 尝试精确匹配 code
+                    product = products.find(p => p.code && p.code === q);
+                }
+                if (!product) {
+                    // 尝试用 code 去掉 "SP" 前缀匹配数字部分
+                    const numericPart = q.replace(/^SP/i, ''); // 移除 SP 前缀（不区分大小写）
+                    product = products.find(p => p.code && p.code.toUpperCase().replace(/^SP/, '') === numericPart);
+                }
+                if (!product) {
+                    // 尝试商品名称包含查询（不区分大小写）
+                    const lowerQ = q.toLowerCase();
+                    product = products.find(p => p.name.toLowerCase().includes(lowerQ));
+                }
+
                 const resultDiv = document.getElementById('scanResult');
                 const resultImage = document.getElementById('resultImage');
                 const resultName = document.getElementById('resultName');
@@ -1449,7 +1458,7 @@
                     resultDiv.className = 'scan-result show';
                     resultName.textContent = product.name;
                     resultPrice.innerHTML = '¥' + product.price.toFixed(2);
-                    resultCode.textContent = '编码：' + code;
+                    resultCode.textContent = '编码：' + (product.code || product.barcode || '');
                     const imgSrc = product.imageBase64 || product.imageUrl || '';
                     if (imgSrc) { resultImage.src = imgSrc;
                         resultImage.style.display = 'block'; } else { resultImage.style.display = 'none'; }
@@ -1457,17 +1466,17 @@
                 } else {
                     resultDiv.className = 'scan-result show not-found';
                     resultName.textContent = '未找到匹配商品';
-                    resultPrice.innerHTML = '<span style="font-size:1.2rem;">未知编码</span>';
-                    resultCode.textContent = '扫描编码：' + code;
+                    resultPrice.innerHTML = '<span style="font-size:1.2rem;">无结果</span>';
+                    resultCode.textContent = '查询内容：' + q;
                     resultImage.style.display = 'none';
                 }
                 resultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
 
             function manualQuery() {
-                const code = document.getElementById('manualCodeInput').value.trim();
-                if (!code) { showToast('请输入编码', 'error'); return; }
-                matchAndDisplay(code);
+                const q = document.getElementById('manualCodeInput').value.trim();
+                if (!q) { showToast('请输入商品名称或编码', 'error'); return; }
+                matchAndDisplay(q);
             }
 
             function clearResult() {
@@ -1499,31 +1508,108 @@
                 }
             }
 
-            // ===== 导入导出 =====
-            function exportData() {
+            // ===== CSV 导出 =====
+            function exportCSV() {
                 if (products.length === 0) { showToast('无数据可导出', 'error'); return; }
-                const blob = new Blob([JSON.stringify(products, null, 2)], { type: 'application/json' });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = '商品数据_' + new Date().toISOString().slice(0, 10) + '.json';
-                a.click();
-                showToast('✅ 已导出', 'success');
+                // 标题行：名称,价格,条形码,二维码编码
+                const header = ['名称', '价格(元)', '条形码', '二维码编码'];
+                const rows = products.map(p => [
+                    p.name,
+                    p.price,
+                    p.barcode || '',
+                    p.code || ''
+                ]);
+                const csvContent = [header, ...rows]
+                    .map(row => row.map(cell => {
+                        if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes(
+                            '\n'))) {
+                            return `"${cell.replace(/"/g, '""')}"`;
+                        }
+                        return cell;
+                    }).join(','))
+                    .join('\n');
+
+                // 加 BOM 支持中文
+                const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = '商品数据_' + new Date().toISOString().slice(0, 10) + '.csv';
+                link.click();
+                showToast('✅ CSV导出成功', 'success');
             }
 
-            function importData(event) {
+            // ===== CSV 导入 =====
+            function importCSV(event) {
                 const file = event.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     try {
-                        const data = JSON.parse(e.target.result);
-                        if (!Array.isArray(data)) throw new Error('格式错误');
-                        if (!confirm('导入将覆盖当前数据，确定吗？')) return;
-                        products = data.map(p => ({ ...p, barcode: p.barcode || '', code: p.code || '' }));
+                        const text = e.target.result;
+                        // 去掉 BOM
+                        const clean = text.replace(/^\uFEFF/, '');
+                        const lines = clean.split(/\r?\n/).filter(line => line.trim() !== '');
+                        if (lines.length < 2) { showToast('CSV文件格式错误', 'error'); return; }
+                        // 解析CSV（简单实现，忽略引号内的逗号）
+                        const parseRow = (row) => {
+                            // 简单分割，不考虑引号嵌套，但可处理引号
+                            const result = [];
+                            let current = '';
+                            let inQuotes = false;
+                            for (let i = 0; i < row.length; i++) {
+                                const ch = row[i];
+                                if (ch === '"') {
+                                    if (inQuotes && row[i + 1] === '"') { current += '"';
+                                        i++; continue; }
+                                    inQuotes = !inQuotes;
+                                } else if (ch === ',' && !inQuotes) {
+                                    result.push(current.trim());
+                                    current = '';
+                                } else {
+                                    current += ch;
+                                }
+                            }
+                            result.push(current.trim());
+                            return result;
+                        };
+
+                        const header = parseRow(lines[0]);
+                        // 期望标题：名称,价格,条形码,二维码编码 (顺序可调，但这里按顺序)
+                        const dataRows = lines.slice(1).map(line => parseRow(line));
+                        const imported = [];
+                        for (const row of dataRows) {
+                            if (row.length < 4) continue;
+                            const name = row[0] || '未命名';
+                            const price = parseFloat(row[1]);
+                            if (isNaN(price)) continue;
+                            const barcode = row[2] || '';
+                            const code = row[3] || '';
+                            // 检查编码冲突
+                            if (code && products.some(p => p.code === code)) {
+                                // 自动追加后缀或跳过
+                                showToast(`编码 ${code} 已存在，跳过该行`, 'error');
+                                continue;
+                            }
+                            imported.push({
+                                id: generateId(),
+                                name,
+                                price,
+                                barcode,
+                                code,
+                                imageUrl: '',
+                                imageBase64: '',
+                                createdAt: Date.now()
+                            });
+                        }
+                        if (imported.length === 0) { showToast('没有有效数据可导入', 'error'); return; }
+                        if (!confirm(`将导入 ${imported.length} 条数据，是否继续？`)) return;
+                        products = [...imported, ...products];
                         saveProducts();
                         renderProductList();
-                        showToast('✅ 导入成功', 'success');
-                    } catch { showToast('⚠️ 文件格式错误', 'error'); }
+                        showToast(`✅ 成功导入 ${imported.length} 条数据`, 'success');
+                    } catch (err) {
+                        showToast('⚠️ CSV解析失败：' + err.message, 'error');
+                    }
                 };
                 reader.readAsText(file);
                 event.target.value = '';
@@ -1560,8 +1646,8 @@
             window.closeQrModal = closeQrModal;
             window.closeQrModalDirect = closeQrModalDirect;
             window.saveQrImage = saveQrImage;
-            window.exportData = exportData;
-            window.importData = importData;
+            window.exportCSV = exportCSV;
+            window.importCSV = importCSV;
             window.deleteProduct = deleteProduct;
             window.openAddModal = openAddModal;
             window.openEditModal = openEditModal;
@@ -1576,7 +1662,6 @@
             function init() {
                 loadProducts();
                 renderProductList();
-                // 默认显示扫码
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('scanView').classList.add('active');
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
