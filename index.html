@@ -195,16 +195,25 @@
             padding: 4px 12px;
             font-size: 0.85rem;
         }
-        .card-header-right .btn-add {
-            width: 36px;
-            height: 36px;
-            font-size: 1.6rem;
-            padding: 0;
-            min-height: 36px;
+        .btn-add-inline {
+            background: var(--primary);
+            color: #fff;
             border-radius: 50%;
-            display: flex;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            font-size: 1.4rem;
+            line-height: 1;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 2px 8px rgba(224, 123, 60, 0.3);
+            flex-shrink: 0;
+        }
+        .btn-add-inline:active {
+            transform: scale(0.9);
         }
 
         .product-list {
@@ -339,24 +348,6 @@
             min-height: 36px;
             border-radius: 22px;
         }
-        .btn-add {
-            background: var(--primary);
-            color: #fff;
-            border-radius: 50%;
-            width: 48px;
-            height: 48px;
-            padding: 0;
-            font-size: 2rem;
-            line-height: 1;
-            box-shadow: 0 4px 12px rgba(224, 123, 60, 0.3);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-        .btn-add:active {
-            transform: scale(0.9);
-        }
 
         #scan-reader {
             position: relative;
@@ -484,59 +475,89 @@
             cursor: not-allowed;
         }
 
-        .scan-result {
+        /* ===== 扫码结果多卡片 ===== */
+        .scan-result-area {
             margin-top: 16px;
-            padding: 20px;
-            border-radius: var(--radius);
-            background: #f2faf5;
-            border: 2px solid var(--success);
-            display: none;
-            animation: popIn 0.4s;
-            text-align: center;
         }
-        .scan-result.show {
-            display: block;
+        .scan-result-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 4px;
         }
-        .scan-result.not-found {
-            background: #fff8f5;
-            border-color: var(--warning);
-        }
-        @keyframes popIn {
-            from {
-                opacity: 0;
-                transform: scale(0.85);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        .result-product-image {
-            width: 140px;
-            height: 140px;
-            object-fit: cover;
+        .scan-result-item {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 12px;
+            background: #fdfbf8;
             border-radius: var(--radius-sm);
-            margin: 0 auto 12px;
-            border: 3px solid #fff;
-            background: #f9f6f1;
+            border: 1px solid var(--border);
+            animation: popIn 0.3s ease;
         }
-        .result-product-name {
-            font-size: var(--font-xl);
+        .scan-result-item .item-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #f5f1ea;
+            flex-shrink: 0;
+        }
+        .scan-result-item .item-thumb.no-thumb {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: #bbb;
+            background: #f0ebe4;
+        }
+        .scan-result-item .item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .scan-result-item .item-name {
+            font-weight: 700;
+            font-size: var(--font-md);
+        }
+        .scan-result-item .item-price {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #d44;
+        }
+        .scan-result-item .item-code {
+            font-size: 0.75rem;
+            color: #a09486;
+        }
+        .scan-result-item .btn-del-item {
+            background: #fdeaea;
+            color: #b33;
+            border: 1px solid #f5d0d0;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .scan-result-item .btn-del-item:active {
+            transform: scale(0.92);
+        }
+
+        .scan-total {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: #f0f5ea;
+            border-radius: var(--radius-sm);
+            border: 2px solid var(--success);
+            text-align: center;
+            font-size: 1.2rem;
             font-weight: 700;
             color: #4a3728;
         }
-        .result-product-price {
-            font-size: 3rem;
-            font-weight: 800;
+        .scan-total .total-amount {
+            font-size: 2rem;
             color: #d44;
-            margin: 8px 0;
-        }
-        .result-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 14px;
-            flex-wrap: wrap;
-            justify-content: center;
         }
 
         .modal-overlay {
@@ -740,11 +761,6 @@
                 padding: 4px 6px;
                 min-height: 28px;
             }
-            .btn-add {
-                width: 40px;
-                height: 40px;
-                font-size: 1.6rem;
-            }
             .modal-dialog {
                 padding: 18px 14px;
             }
@@ -762,11 +778,10 @@
                 padding: 4px 8px;
                 min-height: 26px;
             }
-            .card-header-right .btn-add {
-                width: 32px;
-                height: 32px;
-                font-size: 1.3rem;
-                min-height: 32px;
+            .btn-add-inline {
+                width: 28px;
+                height: 28px;
+                font-size: 1.2rem;
             }
             .btn-exit-scan {
                 width: 36px;
@@ -774,6 +789,13 @@
                 font-size: 1.2rem;
                 top: 8px;
                 right: 8px;
+            }
+            .scan-result-item .item-thumb {
+                width: 44px;
+                height: 44px;
+            }
+            .scan-result-item .item-price {
+                font-size: 1.2rem;
             }
         }
         @media (max-width: 380px) {
@@ -789,12 +811,6 @@
                 font-size: 0.65rem;
                 padding: 2px 6px;
                 min-height: 22px;
-            }
-            .card-header-right .btn-add {
-                width: 28px;
-                height: 28px;
-                font-size: 1.1rem;
-                min-height: 28px;
             }
         }
     </style>
@@ -839,14 +855,17 @@
                 </div>
             </div>
 
-            <div class="scan-result" id="scanResult">
-                <img class="result-product-image" id="resultImage" src="" alt="商品图片" onerror="this.style.display='none'">
-                <div class="result-product-name" id="resultName"></div>
-                <div class="result-product-price" id="resultPrice"></div>
-                <div class="result-product-code" id="resultCode"></div>
-                <div class="result-actions">
-                    <button class="btn btn-primary btn-sm" onclick="speakResult()">🔊 语音播报</button>
-                    <button class="btn btn-outline btn-sm" onclick="clearResult()">✕ 关闭</button>
+            <!-- ===== 扫码结果多卡片区域 ===== -->
+            <div class="card scan-result-area" id="scanResultArea">
+                <div class="card-header" style="margin-bottom:8px;">
+                    <span>📋 扫码记录</span>
+                    <button class="btn btn-outline btn-sm" onclick="clearAllScanResults()">清空全部</button>
+                </div>
+                <div class="scan-result-list" id="scanResultList">
+                    <!-- 动态插入卡片 -->
+                </div>
+                <div class="scan-total" id="scanTotal">
+                    合计：<span class="total-amount" id="totalAmount">0.00</span> 元
                 </div>
             </div>
         </section>
@@ -855,12 +874,14 @@
         <section class="view" id="manageView">
             <div class="card">
                 <div class="card-header">
-                    <span class="card-header-left">📦 商品列表</span>
+                    <span class="card-header-left">
+                        📦 商品列表
+                        <button class="btn-add-inline" onclick="openAddModal()" title="添加商品">➕</button>
+                    </span>
                     <span class="card-header-right">
                         <button class="btn btn-outline btn-sm" onclick="exportExcel()">导出</button>
                         <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFileInput').click()">导入</button>
                         <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="importExcel(event)">
-                        <button class="btn btn-add" onclick="openAddModal()" title="添加商品">➕</button>
                     </span>
                 </div>
                 <div class="product-list" id="productList"></div>
@@ -957,6 +978,9 @@
             let barcodeScanner = null;
             let isBarcodeScanning = false;
 
+            // ===== 扫码结果存储 =====
+            let scanResults = [];
+
             // ===== 工具 =====
             function generateId() { return 'prod_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8); }
 
@@ -1051,6 +1075,69 @@
                     `;
                 });
                 listEl.innerHTML = html;
+            }
+
+            // ===== 扫码结果多卡片渲染 =====
+            function renderScanResults() {
+                const listEl = document.getElementById('scanResultList');
+                const totalEl = document.getElementById('totalAmount');
+                if (scanResults.length === 0) {
+                    listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span><p>暂无扫码记录</p></div>';
+                    totalEl.textContent = '0.00';
+                    return;
+                }
+                let html = '';
+                let total = 0;
+                scanResults.forEach((item, index) => {
+                    total += item.price;
+                    const imgSrc = item.imageBase64 || item.imageUrl || '';
+                    const thumbHtml = imgSrc ?
+                        `<img class="item-thumb" src="${imgSrc}" alt="${escapeHtml(item.name)}" onerror="this.classList.add('no-thumb');this.innerHTML='📷';">` :
+                        `<div class="item-thumb no-thumb">📷</div>`;
+                    html += `
+                        <div class="scan-result-item" data-index="${index}">
+                            ${thumbHtml}
+                            <div class="item-info">
+                                <div class="item-name">${escapeHtml(item.name)}</div>
+                                <div class="item-price">¥${item.price.toFixed(2)}</div>
+                                <div class="item-code">${escapeHtml(item.code || item.barcode || '')}</div>
+                            </div>
+                            <button class="btn-del-item" onclick="removeScanResult(${index})">✕ 删除</button>
+                        </div>
+                    `;
+                });
+                listEl.innerHTML = html;
+                totalEl.textContent = total.toFixed(2);
+            }
+
+            function addScanResult(product) {
+                // 添加新结果到数组
+                scanResults.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    code: product.code || product.barcode || '',
+                    imageUrl: product.imageUrl || '',
+                    imageBase64: product.imageBase64 || ''
+                });
+                renderScanResults();
+                // 滚动到最新
+                const list = document.getElementById('scanResultList');
+                list.scrollTop = list.scrollHeight;
+            }
+
+            function removeScanResult(index) {
+                scanResults.splice(index, 1);
+                renderScanResults();
+                showToast('已删除该记录', 'success');
+            }
+
+            function clearAllScanResults() {
+                if (scanResults.length === 0) return;
+                if (!confirm('确定清空所有扫码记录吗？')) return;
+                scanResults = [];
+                renderScanResults();
+                showToast('已清空全部记录', 'success');
             }
 
             // ===== 模态框 =====
@@ -1346,7 +1433,6 @@
                 if (isScanning) return;
                 if (!window.Html5Qrcode) { showToast('扫码库加载失败', 'error'); return; }
                 if (!html5QrCode) html5QrCode = new Html5Qrcode('scan-reader');
-                clearResult();
 
                 if (scanTimer) { clearTimeout(scanTimer);
                     scanTimer = null; }
@@ -1422,94 +1508,62 @@
 
             function onScanSuccess(decodedText) {
                 const now = Date.now();
-                if (now - lastScanTime < 2500) return;
+                if (now - lastScanTime < 1500) return; // 防连扫
                 lastScanTime = now;
                 if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-                matchAndDisplay(decodedText.trim());
+
+                const product = findProductByCode(decodedText.trim());
+                if (product) {
+                    addScanResult(product);
+                    showToast(`✅ 已添加：${product.name}`, 'success');
+                } else {
+                    showToast('⚠️ 未找到匹配商品', 'error');
+                }
+
+                // 自动停止扫码，方便再次扫码
                 stopScanner();
+                // 短暂禁用开始按钮
                 document.getElementById('btnStartScan').disabled = true;
                 setTimeout(() => {
                     document.getElementById('btnStartScan').disabled = false;
-                }, 2000);
+                }, 1200);
             }
 
             function onScanFailure() {}
 
-            // ===== 查询 =====
-            function matchAndDisplay(query) {
-                if (!query || query.trim() === '') { showToast('请输入查询内容', 'error'); return; }
-                const q = query.trim();
-                let product = products.find(p => p.barcode && p.barcode === q);
+            // ===== 查找商品 =====
+            function findProductByCode(code) {
+                let product = products.find(p => p.barcode && p.barcode === code);
                 if (!product) {
-                    product = products.find(p => p.code && p.code === q);
+                    product = products.find(p => p.code && p.code === code);
                 }
                 if (!product) {
-                    const numericPart = q.replace(/^SP/i, '');
+                    const numericPart = code.replace(/^SP/i, '');
                     product = products.find(p => p.code && p.code.toUpperCase().replace(/^SP/, '') === numericPart);
                 }
-                if (!product) {
-                    const lowerQ = q.toLowerCase();
-                    product = products.find(p => p.name.toLowerCase().includes(lowerQ));
-                }
-
-                const resultDiv = document.getElementById('scanResult');
-                const resultImage = document.getElementById('resultImage');
-                const resultName = document.getElementById('resultName');
-                const resultPrice = document.getElementById('resultPrice');
-                const resultCode = document.getElementById('resultCode');
-
-                if (product) {
-                    resultDiv.className = 'scan-result show';
-                    resultName.textContent = product.name;
-                    resultPrice.innerHTML = '¥' + product.price.toFixed(2);
-                    resultCode.textContent = '编码：' + (product.code || product.barcode || '');
-                    const imgSrc = product.imageBase64 || product.imageUrl || '';
-                    if (imgSrc) { resultImage.src = imgSrc;
-                        resultImage.style.display = 'block'; } else { resultImage.style.display = 'none'; }
-                    setTimeout(() => autoSpeak(product), 400);
-                } else {
-                    resultDiv.className = 'scan-result show not-found';
-                    resultName.textContent = '未找到匹配商品';
-                    resultPrice.innerHTML = '<span style="font-size:1.2rem;">无结果</span>';
-                    resultCode.textContent = '查询内容：' + q;
-                    resultImage.style.display = 'none';
-                }
-                resultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return product || null;
             }
 
+            // ===== 手动查询 =====
             function manualQuery() {
                 const q = document.getElementById('manualCodeInput').value.trim();
                 if (!q) { showToast('请输入商品名称或编码', 'error'); return; }
-                matchAndDisplay(q);
-            }
-
-            function clearResult() {
-                document.getElementById('scanResult').className = 'scan-result';
+                const product = findProductByCode(q);
+                if (product) {
+                    addScanResult(product);
+                    showToast(`✅ 已添加：${product.name}`, 'success');
+                } else {
+                    // 尝试按名称模糊匹配
+                    const lowerQ = q.toLowerCase();
+                    const found = products.find(p => p.name.toLowerCase().includes(lowerQ));
+                    if (found) {
+                        addScanResult(found);
+                        showToast(`✅ 已添加：${found.name}`, 'success');
+                    } else {
+                        showToast('⚠️ 未找到匹配商品', 'error');
+                    }
+                }
                 document.getElementById('manualCodeInput').value = '';
-            }
-
-            function autoSpeak(product) {
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(product.name + '，价格' + product.price + '元');
-                    utterance.lang = 'zh-CN';
-                    utterance.rate = 0.75;
-                    setTimeout(() => window.speechSynthesis.speak(utterance), 300);
-                }
-            }
-
-            function speakResult() {
-                const name = document.getElementById('resultName').textContent;
-                const price = document.getElementById('resultPrice').textContent.replace('¥', '');
-                if (!name || name.includes('未找到')) { showToast('无内容可播报', 'error'); return; }
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(name + '，价格' + price + '元');
-                    utterance.lang = 'zh-CN';
-                    utterance.rate = 0.7;
-                    window.speechSynthesis.speak(utterance);
-                    showToast('🔊 正在播报', 'success');
-                }
             }
 
             // ===== Excel 导出 =====
@@ -1654,8 +1708,6 @@
             window.startScanner = startScanner;
             window.stopScanner = stopScanner;
             window.manualQuery = manualQuery;
-            window.clearResult = clearResult;
-            window.speakResult = speakResult;
             window.showQrCode = showQrCode;
             window.closeQrModal = closeQrModal;
             window.closeQrModalDirect = closeQrModalDirect;
@@ -1671,11 +1723,14 @@
             window.handleModalImageUpload = handleModalImageUpload;
             window.startBarcodeScanModal = startBarcodeScanModal;
             window.cancelBarcodeScan = cancelBarcodeScan;
+            window.removeScanResult = removeScanResult;
+            window.clearAllScanResults = clearAllScanResults;
 
             // ===== 初始化 =====
             function init() {
                 loadProducts();
                 renderProductList();
+                renderScanResults();
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('scanView').classList.add('active');
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
