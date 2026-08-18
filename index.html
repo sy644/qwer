@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, shrink-to-fit=yes" />
     <title>商品扫码查询 · 老人友好版</title>
 
-    <!-- 扫码库 -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
     </script>
-    <!-- 生成二维码库 -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js">
     </script>
 
@@ -86,7 +84,6 @@
             color: #9b8b7a;
         }
 
-        /* ===== 底部导航 ===== */
         .nav-bottom {
             position: fixed;
             bottom: 0;
@@ -194,7 +191,6 @@
             flex-shrink: 0;
         }
 
-        /* ===== 商品列表 ===== */
         .product-list {
             display: flex;
             flex-direction: column;
@@ -275,7 +271,6 @@
             cursor: not-allowed;
         }
 
-        /* ===== 按钮 ===== */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -347,7 +342,6 @@
             transform: scale(0.9);
         }
 
-        /* ===== 扫码 ===== */
         #scan-reader {
             position: relative;
             width: 100%;
@@ -529,7 +523,6 @@
             justify-content: center;
         }
 
-        /* ===== 模态框 ===== */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -653,7 +646,6 @@
             opacity: 0.6;
         }
 
-        /* ===== 二维码弹窗 ===== */
         #qrModal .modal-dialog {
             text-align: center;
             max-width: 400px;
@@ -678,7 +670,6 @@
             background: #4a8a5e;
         }
 
-        /* ===== Toast ===== */
         .toast {
             position: fixed;
             bottom: calc(var(--nav-height) + 20px);
@@ -788,7 +779,6 @@
 <body>
     <div class="app-container">
 
-        <!-- 顶部 -->
         <header class="app-header">
             <span class="icon-row">🛒</span>
             <h1>商品扫码查询</h1>
@@ -861,7 +851,7 @@
         </nav>
     </div>
 
-    <!-- ===== 添加/编辑商品模态框 ===== -->
+    <!-- ===== 模态框 ===== -->
     <div class="modal-overlay" id="productModal" style="display:none;" onclick="closeModalOutside(event)">
         <div class="modal-dialog" onclick="event.stopPropagation()">
             <h2 id="modalTitle">➕ 添加商品</h2>
@@ -907,7 +897,7 @@
         </div>
     </div>
 
-    <!-- ===== 二维码弹窗（含保存按钮） ===== -->
+    <!-- ===== 二维码弹窗 ===== -->
     <div class="modal-overlay" id="qrModal" style="display:none;" onclick="closeQrModal(event)">
         <div class="modal-dialog" onclick="event.stopPropagation()">
             <h3 style="text-align:center;">📱 商品二维码</h3>
@@ -920,7 +910,7 @@
         </div>
     </div>
 
-    <!-- ===== 条形码扫码弹窗（独立） ===== -->
+    <!-- ===== 条形码扫码弹窗 ===== -->
     <div class="modal-overlay" id="barcodeScanModal" style="display:none;" onclick="event.stopPropagation()">
         <div class="modal-dialog" style="max-width:420px;">
             <h3 style="text-align:center;">📷 扫描条形码</h3>
@@ -936,7 +926,6 @@
         (function() {
             'use strict';
 
-            // ===== 数据 =====
             const STORAGE_KEY = 'elderly_product_db_v2';
             let products = [];
             let html5QrCode = null;
@@ -951,7 +940,6 @@
             function escapeHtml(str) { const d = document.createElement('div');
                 d.textContent = str; return d.innerHTML; }
 
-            // ===== Toast =====
             let toastTimer;
 
             function showToast(msg, type = '') {
@@ -962,7 +950,7 @@
                 toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
             }
 
-            // ===== 数据持久化 =====
+            // ===== 数据 =====
             function loadProducts() {
                 try {
                     const raw = localStorage.getItem(STORAGE_KEY);
@@ -995,7 +983,6 @@
                 ];
             }
 
-            // ===== 自动生成二维码编码 =====
             function generateNextCode() {
                 const codes = products
                     .map(p => p.code)
@@ -1008,7 +995,6 @@
                 return 'SP' + String(nextNum).padStart(3, '0');
             }
 
-            // ===== 渲染商品列表 =====
             function renderProductList() {
                 const listEl = document.getElementById('productList');
                 if (products.length === 0) {
@@ -1044,7 +1030,7 @@
                 listEl.innerHTML = html;
             }
 
-            // ===== 添加/编辑模态框 =====
+            // ===== 模态框 =====
             let editingId = null;
 
             function openAddModal() {
@@ -1108,7 +1094,6 @@
                 if (e.target === document.getElementById('productModal')) closeModal();
             }
 
-            // ===== 模态框提交 =====
             function handleModalSubmit(event) {
                 event.preventDefault();
                 const name = document.getElementById('modalName').value.trim();
@@ -1168,7 +1153,6 @@
                 renderProductList();
             }
 
-            // ===== 模态框图片上传 =====
             function handleModalImageUpload(event) {
                 const file = event.target.files[0];
                 if (!file || !file.type.startsWith('image/')) return;
@@ -1204,7 +1188,6 @@
                 reader.readAsDataURL(file);
             }
 
-            // ===== 删除商品 =====
             function deleteProduct(id) {
                 if (!confirm('确定删除该商品吗？')) return;
                 products = products.filter(p => p.id !== id);
@@ -1213,7 +1196,7 @@
                 showToast('🗑️ 已删除', 'success');
             }
 
-            // ===== 二维码弹窗（含保存） =====
+            // ===== 二维码 =====
             let currentQrCanvas = null;
 
             function showQrCode(id) {
@@ -1277,7 +1260,7 @@
                 }
             });
 
-            // ===== 条形码扫码（模态框内） =====
+            // ===== 条形码扫码 =====
             async function startBarcodeScanModal() {
                 if (isScanning) stopScanner();
                 if (isBarcodeScanning) return;
@@ -1330,7 +1313,7 @@
                 document.getElementById('barcodeScanReader').innerHTML = '';
             }
 
-            // ===== 主扫码功能 =====
+            // ===== 扫码 =====
             function startScanner() {
                 const readerEl = document.getElementById('scan-reader');
                 const placeholder = document.getElementById('scanPlaceholder');
@@ -1427,7 +1410,6 @@
 
             function onScanFailure() {}
 
-            // ===== 核心查询：支持名称、编码（含数字部分） =====
             function matchAndDisplay(query) {
                 if (!query || query.trim() === '') { showToast('请输入查询内容', 'error'); return; }
                 const q = query.trim();
@@ -1504,7 +1486,7 @@
                 }
             }
 
-            // ===== CSV 导出（纯文本） =====
+            // ===== CSV 导出（纯文本，带 BOM） =====
             function exportCSV() {
                 if (products.length === 0) { showToast('无数据可导出', 'error'); return; }
                 const header = ['名称', '价格(元)', '条形码', '二维码编码'];
@@ -1514,7 +1496,7 @@
                     p.barcode || '',
                     p.code || ''
                 ]);
-                const csvContent = [header, ...rows]
+                let csvContent = [header, ...rows]
                     .map(row => row.map(cell => {
                         if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes(
                             '\n'))) {
@@ -1524,7 +1506,7 @@
                     }).join(','))
                     .join('\n');
 
-                // 带 BOM 的 UTF-8
+                // 添加 BOM 确保 Excel 正确识别 UTF-8
                 const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
@@ -1533,7 +1515,7 @@
                 showToast('✅ CSV导出成功', 'success');
             }
 
-            // ===== CSV 导入（修复解析，去重提示） =====
+            // ===== CSV 导入（纯文本解析） =====
             function importCSV(event) {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -1544,7 +1526,10 @@
                         // 移除 BOM
                         const clean = text.replace(/^\uFEFF/, '');
                         const lines = clean.split(/\r?\n/).filter(line => line.trim() !== '');
-                        if (lines.length < 2) { showToast('CSV文件格式错误（至少需要标题行+数据行）', 'error'); return; }
+                        if (lines.length < 2) {
+                            showToast('CSV文件格式错误（至少需要标题行+数据行）', 'error');
+                            return;
+                        }
 
                         // 解析CSV（支持引号）
                         const parseRow = (row) => {
@@ -1569,10 +1554,12 @@
                         };
 
                         const header = parseRow(lines[0]);
-                        // 期望：名称,价格,条形码,二维码编码 （顺序固定）
+                        // 期望标题列：名称,价格,条形码,二维码编码
                         const dataRows = lines.slice(1).map(line => parseRow(line));
                         const imported = [];
                         let skipCount = 0;
+                        const conflictCodes = [];
+
                         for (const row of dataRows) {
                             if (row.length < 4) continue;
                             const name = row[0] || '未命名';
@@ -1581,11 +1568,11 @@
                             const barcode = row[2] || '';
                             let code = row[3] || '';
 
-                            // 如果编码为空，自动生成
+                            // 处理编码冲突
                             if (!code) {
                                 code = generateNextCode();
                             } else {
-                                // 检查编码是否已存在（在现有products和本次导入列表中）
+                                // 检查是否已存在（现有 + 本次导入）
                                 const existInExisting = products.some(p => p.code === code);
                                 const existInImported = imported.some(p => p.code === code);
                                 if (existInExisting || existInImported) {
@@ -1596,17 +1583,16 @@
                                             newCode)) {
                                         newCode = code + String(suffix++);
                                     }
+                                    conflictCodes.push(`${code} → ${newCode}`);
                                     code = newCode;
-                                    showToast(`编码 ${row[3]} 已存在，自动改为 ${code}`, 'warning');
                                 }
                             }
 
-                            // 条形码重复检查（同样处理）
+                            // 条形码重复检查（跳过冲突）
                             if (barcode) {
                                 const existBarcode = products.some(p => p.barcode === barcode) ||
                                     imported.some(p => p.barcode === barcode);
                                 if (existBarcode) {
-                                    // 跳过此条
                                     skipCount++;
                                     continue;
                                 }
@@ -1625,11 +1611,16 @@
                         }
 
                         if (imported.length === 0) {
-                            showToast('没有有效数据可导入（可能有编码或条码冲突）', 'error');
+                            let msg = '没有有效数据可导入';
+                            if (skipCount > 0) msg += `（${skipCount} 条因条形码冲突被跳过）`;
+                            if (conflictCodes.length > 0) msg += '\n编码冲突已自动处理。';
+                            showToast(msg, 'error');
                             return;
                         }
+
                         let msg = `将导入 ${imported.length} 条数据`;
                         if (skipCount > 0) msg += `，跳过 ${skipCount} 条（条形码冲突）`;
+                        if (conflictCodes.length > 0) msg += `\n编码调整：${conflictCodes.join('; ')}`;
                         if (!confirm(msg + '，是否继续？')) return;
 
                         // 追加到现有数据（新数据在前）
@@ -1660,13 +1651,12 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
 
-            // ===== 手动输入回车查询 =====
             document.getElementById('manualCodeInput').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') { e.preventDefault();
                     manualQuery(); }
             });
 
-            // ===== 全局暴露 =====
+            // ===== 暴露全局 =====
             window.startScanner = startScanner;
             window.stopScanner = stopScanner;
             window.manualQuery = manualQuery;
