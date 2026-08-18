@@ -172,7 +172,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 14px;
         }
@@ -564,19 +564,27 @@
             color: #d44;
         }
 
-        .scan-auto-clear {
-            margin-top: 8px;
-            padding: 8px 12px;
-            background: #fff8e0;
-            border-radius: var(--radius-sm);
-            border: 1px solid #f0d080;
-            text-align: center;
-            font-size: 0.9rem;
+        /* 倒计时圆圈样式 */
+        .countdown-circle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.95rem;
             color: #8a7a40;
+            font-weight: 600;
         }
-        .scan-auto-clear .countdown {
+        .countdown-circle .number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2.5px solid var(--primary);
+            text-align: center;
+            line-height: 30px;
             font-weight: 700;
-            color: var(--danger);
+            font-size: 1.1rem;
+            color: var(--primary);
+            background: #fff8f0;
         }
 
         .modal-overlay {
@@ -816,6 +824,15 @@
             .scan-result-item .item-price {
                 font-size: 1.2rem;
             }
+            .countdown-circle .number {
+                width: 26px;
+                height: 26px;
+                line-height: 26px;
+                font-size: 0.95rem;
+            }
+            .countdown-circle {
+                font-size: 0.85rem;
+            }
         }
         @media (max-width: 380px) {
             .product-item-actions {
@@ -830,6 +847,12 @@
                 font-size: 0.65rem;
                 padding: 2px 6px;
                 min-height: 22px;
+            }
+            .countdown-circle .number {
+                width: 22px;
+                height: 22px;
+                line-height: 22px;
+                font-size: 0.8rem;
             }
         }
     </style>
@@ -874,15 +897,18 @@
             <div class="card scan-result-area" id="scanResultArea">
                 <div class="card-header" style="margin-bottom:8px;">
                     <span>📋 扫码记录</span>
+                    <!-- 倒计时圆圈 + 秒后 -->
+                    <span id="countdownWrapper" style="display:none; align-items:center; gap:4px; font-size:0.95rem; color:#8a7a40; font-weight:600;">
+                        <span class="countdown-circle">
+                            <span class="number" id="countdownNumber">30</span>
+                        </span>
+                        <span>秒后</span>
+                    </span>
                     <button class="btn btn-outline btn-sm" onclick="clearAllScanResults()">清空全部</button>
                 </div>
                 <div class="scan-result-list" id="scanResultList"></div>
                 <div class="scan-total" id="scanTotal">
                     合计：<span class="total-amount" id="totalAmount">0.00</span> 元
-                </div>
-                <!-- 自动清空提示 -->
-                <div class="scan-auto-clear" id="autoClearTip">
-                    ⏱ 无操作 <span class="countdown" id="countdownDisplay">30</span> 秒后自动清空记录
                 </div>
             </div>
         </section>
@@ -1026,7 +1052,7 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-CN';
-                utterance.rate = 0.9; // 调整语速为0.9
+                utterance.rate = 0.9;
                 setTimeout(() => window.speechSynthesis.speak(utterance), 200);
             }
 
@@ -1123,18 +1149,18 @@
                 }
                 // 如果无记录，隐藏倒计时
                 if (scanResults.length === 0) {
-                    document.getElementById('autoClearTip').style.display = 'none';
+                    document.getElementById('countdownWrapper').style.display = 'none';
                     return;
                 }
                 // 显示倒计时
-                document.getElementById('autoClearTip').style.display = 'block';
+                document.getElementById('countdownWrapper').style.display = 'inline-flex';
                 remainingSeconds = AUTO_CLEAR_DELAY;
-                document.getElementById('countdownDisplay').textContent = remainingSeconds;
+                document.getElementById('countdownNumber').textContent = remainingSeconds;
 
                 // 启动倒计时更新
                 countdownInterval = setInterval(() => {
                     remainingSeconds--;
-                    document.getElementById('countdownDisplay').textContent = remainingSeconds;
+                    document.getElementById('countdownNumber').textContent = remainingSeconds;
                     if (remainingSeconds <= 0) {
                         clearInterval(countdownInterval);
                         countdownInterval = null;
@@ -1149,7 +1175,7 @@
                         showToast('⏱ 长时间无操作，已自动清空记录', 'success');
                     }
                     // 清空后隐藏倒计时
-                    document.getElementById('autoClearTip').style.display = 'none';
+                    document.getElementById('countdownWrapper').style.display = 'none';
                     if (countdownInterval) {
                         clearInterval(countdownInterval);
                         countdownInterval = null;
@@ -1162,13 +1188,13 @@
                 const listEl = document.getElementById('scanResultList');
                 const totalEl = document.getElementById('totalAmount');
                 const area = document.getElementById('scanResultArea');
-                const tip = document.getElementById('autoClearTip');
+                const wrapper = document.getElementById('countdownWrapper');
 
                 if (scanResults.length === 0) {
                     listEl.innerHTML = '';
                     totalEl.textContent = '0.00';
                     area.classList.remove('has-records');
-                    tip.style.display = 'none';
+                    wrapper.style.display = 'none';
                     // 清除定时器
                     if (autoClearTimer) {
                         clearTimeout(autoClearTimer);
@@ -1204,12 +1230,11 @@
                 listEl.innerHTML = html;
                 totalEl.textContent = total.toFixed(2);
 
-                // 重置自动清空定时器（每次有记录变化时重置）
+                // 重置自动清空定时器
                 resetAutoClearTimer();
             }
 
             function addScanResult(product) {
-                // 添加新结果到数组
                 scanResults.push({
                     id: product.id,
                     name: product.name,
@@ -1219,9 +1244,7 @@
                     imageBase64: product.imageBase64 || ''
                 });
                 renderScanResults();
-                // 语音播报
                 speakText(product.name + '，价格' + product.price + '元');
-                // 滚动到最新
                 const list = document.getElementById('scanResultList');
                 if (list) list.scrollTop = list.scrollHeight;
             }
@@ -1651,7 +1674,6 @@
                     addScanResult(product);
                     showToast(`✅ 已添加：${product.name}`, 'success');
                 } else {
-                    // 按名称模糊匹配
                     const lowerQ = q.toLowerCase();
                     const found = products.find(p => p.name.toLowerCase().includes(lowerQ));
                     if (found) {
@@ -1835,8 +1857,8 @@
                 document.querySelector('.nav-tab[data-view="scanView"]').classList.add('active');
                 document.getElementById('scan-reader').classList.remove('scanning');
                 document.getElementById('scanPlaceholder').style.display = '';
-                // 初始化倒计时隐藏
-                document.getElementById('autoClearTip').style.display = 'none';
+                // 初始隐藏倒计时
+                document.getElementById('countdownWrapper').style.display = 'none';
             }
 
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
